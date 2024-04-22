@@ -9,7 +9,7 @@
 <body>
     <main>
         <header>
-            <h1>Detector de salud de las hojas de limón</h1>
+            <h1>Citroleaf</h1>
             <p>Las hojas son un indicador importante de la salud general del árbol. Si las hojas están verdes y vibrantes, es probable que el árbol esté sano. Por otro lado, si las hojas están amarillas, marrones, tienen manchas o están cayendo, podría ser una señal de que el árbol está enfermo o estresado.</p>
             <p>Además, la salud de las hojas afecta directamente la capacidad del árbol para producir limones. Las hojas sanas son capaces de realizar la fotosíntesis de manera eficiente, lo que a su vez alimenta el crecimiento y desarrollo de los frutos.</p>
         </header>
@@ -19,6 +19,8 @@
             <video id="video" playsinline autoplay style="width: 1px;"></video>
             <canvas id="canvas" width="600" height="600" style="max-width: 100%;"></canvas>
             <canvas id="otrocanvas" width="256" height="256" style="display: none"></canvas>
+            <button onclick="mostrarCamara()" id = "change-to-camera">Cambiar a cámara</button>
+            <button onclick="subirFoto()" id="upload-photo">Subir una imagen</button>
             <button id="cambiar-camara" onclick="cambiarCamara();">Cambiar camara</button>
         </article>
         <dialog>
@@ -37,10 +39,55 @@
         var modelo = null;
         var dialog = document.querySelector("dialog");
         var dialogContent = document.getElementById("dialog-content");
+        var camaraDetenida = false;
+        function subirFoto() {
+            document.getElementById("change-to-camera").style.display = "block";
+            document.getElementById("cambiar-camara").style.display = "none";
+            document.getElementById("upload-photo").style.display = "none";
+            detenerCamara();
+            var input = document.createElement("input");
+            input.type = "file";
+            input.accept = "image/*";
+            input.onchange = function(e) {
+                var file = e.target.files[0];
+                var reader = new FileReader();
+                reader.onload = function() {
+                    var img = new Image();
+                    img.onload = function() {
+
+                        //Agrandar imagen hasta alcanzar a tamano
+                        var proporcion = tamano / Math.max(img.width, img.height);
+                        var ancho = img.width * proporcion;
+                        var alto = img.height * proporcion;
+                        canvas.width = ancho;
+                        canvas.height = alto;
+                        ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, ancho, alto);
+                        predecir();
+                    }
+                    img.src = reader.result;
+                }
+                reader.readAsDataURL(file);
+            }
+            input.click();
+        }
+
+        function detenerCamara(){
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => {
+                    track.stop();
+                });
+            }
+            camaraDetenida = true;
+        }
+
         function closeDialog() {
             dialog.close();
         }
         async function mostrarCamara() {
+            document.getElementById("upload-photo").style.display = "block";
+            document.getElementById("change-to-camera").style.display = "none";
+            document.getElementById("cambiar-camara").style.display = "block";
+            camaraDetenida = false;
             var opciones = {
                 audio: false,
                 video: {
@@ -104,7 +151,8 @@
     
         function procesarCamara() {
             ctx.drawImage(video, 0, 0, tamano, tamano, 0, 0, tamano, tamano);
-            setTimeout(procesarCamara, 20);
+            if(!camaraDetenida)
+                setTimeout(procesarCamara, 20);
         }
         function predecir() {
           if (modelo) {
